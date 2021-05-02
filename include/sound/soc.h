@@ -1550,6 +1550,20 @@ extern struct dentry *snd_soc_debugfs_root;
 
 extern const struct dev_pm_ops snd_soc_pm_ops;
 
+//+Bug 538153 baoshulin.wt 20191125 modify for compatiable smartpa
+enum{
+   INVALD = -1,
+   FS16XX,
+   AW8825,
+   TAS2558,
+   FS18XX,
+   MAX_NUM,
+};
+int snd_soc_register_info(const char * name);
+void snd_soc_unregister_info(void);
+int snd_soc_set_smartpa_type(const char * name,int pa_type);
+//-Bug 538153 baoshulin.wt 20191125 modify for compatiable smartpa
+
 /* Helper functions */
 static inline void snd_soc_dapm_mutex_lock(struct snd_soc_dapm_context *dapm)
 {

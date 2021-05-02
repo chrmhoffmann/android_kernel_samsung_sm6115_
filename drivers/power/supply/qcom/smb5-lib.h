@@ -17,6 +17,13 @@
 #include <linux/usb/typec.h>
 #include "storm-watch.h"
 #include "battery.h"
+#if defined(CONFIG_BATT_CISD)
+#include "batt-cisd.h"
+#endif
+
+/*+bug545827,xujianbang.wt,20200409,FC:[CW2017] Use soc of CW2017.*/
+#define USING_CW2017_BATT
+/*-bug545827,xujianbang.wt,20200409,FC:[CW2017] Use soc of CW2017.*/
 
 enum print_reason {
 	PR_INTERRUPT	= BIT(0),
@@ -67,6 +74,8 @@ enum print_reason {
 #define HVDCP2_ICL_VOTER		"HVDCP2_ICL_VOTER"
 #define AICL_THRESHOLD_VOTER		"AICL_THRESHOLD_VOTER"
 #define USBOV_DBC_VOTER			"USBOV_DBC_VOTER"
+//Bug 536193,wangjiayuan.wt,Modify,20200518,reduce the reproducibility rate of usbin-ov error.
+#define USBOV_DELAY_VOTER			"USBOV_DELAY_VOTER"
 #define CHG_TERMINATION_VOTER		"CHG_TERMINATION_VOTER"
 #define THERMAL_THROTTLE_VOTER		"THERMAL_THROTTLE_VOTER"
 #define VOUT_VOTER			"VOUT_VOTER"
@@ -80,7 +89,25 @@ enum print_reason {
 #define WLS_PL_CHARGING_VOTER		"WLS_PL_CHARGING_VOTER"
 #define ICL_CHANGE_VOTER		"ICL_CHANGE_VOTER"
 #define OVERHEAT_LIMIT_VOTER		"OVERHEAT_LIMIT_VOTER"
+/* +Bug 538062, zhangbin2.wt, 20200309, Add for AFC, Begin +++  */
+#if defined(CONFIG_AFC)
+#define SEC_BATTERY_AFC_VOTER			"SEC_BATTERY_AFC_VOTER"
+#define SEC_BATTERY_DISABLE_HV_VOTER	"SEC_BATTERY_DISABLE_HV_VOTER"
+#endif
+/* -Bug 538062, zhangbin2.wt, 20200309, Add for AFC, End --- */
+//bug536193 gudi.wt,MODIFIY,20200327,P85943 bringup,add period log
+#define CHG_INSERT_VOTER			"CHG_INSERT_VOTER"
+//+bug536193 gudi.wt,MODIFIY,20200327,P85943 bringup,add period log,ato version control capacity max is 80%
+#ifdef WT_COMPILE_FACTORY_VERSION
+#define FACTORY_VOTER   "STORE_FACTOR_VOTER"
+#endif
+//-bug536193 gudi.wt,MODIFIY,20200327,P85943 bringup,add period log,ato version control capacity max is 80%
+
+//Bug 536193 gudi.wt,MODIFIY,20200421,P85943,power off temp to limit current
+#define POWER_OFF_FCC_VOTER "POWER_OFF_FCC_VOTER"
 #define TYPEC_SWAP_VOTER		"TYPEC_SWAP_VOTER"
+//bug536193 gudi.wt,MODIFIY,2020420,P85943 limit lcd on current
+#define BATT_TEMP_VOTER                "BATT_TEMP_VOTER"
 
 #define BOOST_BACK_STORM_COUNT	3
 #define WEAK_CHG_STORM_COUNT	8
@@ -91,18 +118,70 @@ enum print_reason {
 #define ITERM_LIMITS_PM8150B_MA		10000
 #define ADC_CHG_ITERM_MASK		32767
 
+/* +Bug 538062, zhangbin2.wt, 20200309, Add for AFC, Begin +++  */
+#define AFC_CURRENT_UA			1650000
+/* -Bug 538062, zhangbin2.wt, 20200309, Add for AFC, End --- */
+
 #define SDP_100_MA			100000
 #define SDP_CURRENT_UA			500000
-#define CDP_CURRENT_UA			1500000
-#define DCP_CURRENT_UA			1500000
-#define HVDCP_CURRENT_UA		3000000
+/* Bug 536193, zhangbin2.wt, 20200306, Modify for Charging parameter */
+#define CDP_CURRENT_UA			900000 //1500000
+//bug536193 gudi.wt,MODIFIY,20200325,P85943 bringup set float current
+#define FLOAT_CURRENT_UA		900000
+//bug544546 gudi.wt,MODIFIY,2020409,P85943 HW require 1.55A for DCP
+#define DCP_CURRENT_UA			1550000
+#define HVDCP_CURRENT_UA		1650000 //3000000
 #define TYPEC_DEFAULT_CURRENT_UA	900000
 #define TYPEC_MEDIUM_CURRENT_UA		1500000
-#define TYPEC_HIGH_CURRENT_UA		3000000
+//bug536193 gudi.wt,MODIFIY,20200325,P85943 bringup set PD current
+#define TYPEC_HIGH_CURRENT_UA		1800000//3000000
 #define DCIN_ICL_MIN_UA			100000
 #define DCIN_ICL_MAX_UA			1500000
 #define DCIN_ICL_STEP_UA		100000
 #define ROLE_REVERSAL_DELAY_MS		500
+
+/* +Bug 538062, zhangbin2.wt, 20200309, Add for AFC, Begin +++  */
+#if defined(CONFIG_AFC)
+#define HV_DISABLE 1
+#define HV_ENABLE  0
+#endif
+/* -Bug 538062, zhangbin2.wt, 20200309, Add for AFC, End --- */
+//+bug536193 gudi.wt,MODIFIY,20200325,P85943 bringup,add SS-node battery online node
+#define	BATTERY_ONLINE_INCOMPATIBLE_CHARGER	0
+#define	BATTERY_ONLINE_NONE	1
+#define	BATTERY_ONLINE_TA	3
+#define	BATTERY_ONLINE_USB	4
+#define	BATTERY_ONLINE_WIRELESS_CHARGER	10
+#define	BATTERY_ONLINE_POGO	23
+//battery online node about PD
+#define BATTERY_ONLINE_PD_DCP			44
+#define	BATTERY_ONLINE_FAST_WIRELESS_CHARGER	100
+
+#define SEC_BAT_CURRENT_EVENT_NONE	0x00000
+#define SEC_BAT_CURRENT_EVENT_AFC	0x00001
+#define SEC_BAT_CURRENT_EVENT_CHARGE_DISABLE		0x00002
+#define SEC_BAT_CURRENT_EVENT_SKIP_HEATING_CONTROL	0x00004
+#define SEC_BAT_CURRENT_EVENT_LOW_TEMP_SWELLING		0x00010
+#define SEC_BAT_CURRENT_EVENT_HIGH_TEMP_SWELLING	0x00020
+#define SEC_BAT_CURRENT_EVENT_USB_100MA	0x00040
+#define SEC_BAT_CURRENT_EVENT_SLATE	0x00800
+
+#define BATT_MISC_EVENT_UNDEFINED_RANGE_TYPE	0x00000001
+#define BATT_MISC_EVENT_TIMEOUT_OPEN_TYPE	0x00000004
+#define BATT_MISC_EVENT_HICCUP_TYPE		0x00000020
+#define BATT_MISC_EVENT_BATTERY_HEALTH		0x000F0000,
+//-bug536193 gudi.wt,MODIFIY,20200325,P85943 bringup,add SS-node
+
+enum misc_battery_health {
+	BATTERY_HEALTH_UNKNOWN = 0,
+	BATTERY_HEALTH_GOOD,
+	BATTERY_HEALTH_NORMAL,
+	BATTERY_HEALTH_AGED,
+	BATTERY_HEALTH_MAX = BATTERY_HEALTH_AGED,
+
+	/* For event */
+	BATTERY_HEALTH_BAD = 0xF,
+};
 
 enum smb_mode {
 	PARALLEL_MASTER = 0,
@@ -402,14 +481,27 @@ struct smb_charger {
 	struct power_supply		*usb_psy;
 	struct power_supply		*dc_psy;
 	struct power_supply		*bms_psy;
+//bug536193 gudi.wt,MODIFIY,20200325,P85943 bringup,add SS-node add otg node
+	struct power_supply		*otg_psy;
+	/*+bug538305,xujianbang,20200310,Bringup:Add CW2017 driver.*/
+	struct power_supply		*cw_battery_psy;
+	/*-bug538305,xujianbang,20200310,Bringup:Add CW2017 driver.*/
 	struct power_supply		*usb_main_psy;
 	struct power_supply		*usb_port_psy;
 	struct power_supply		*wls_psy;
 	struct power_supply		*cp_psy;
 	enum power_supply_type		real_charger_type;
 
+#if defined(CONFIG_BATT_CISD)
+	struct cisd cisd;
+#endif
+
 	/* notifiers */
 	struct notifier_block	nb;
+
+#ifdef CONFIG_USB_NOTIFIER
+	struct notifier_block	otg_nb;		//bug545925, zhaobeilong@wt, 20200410, add usb control node
+#endif
 
 	/* parallel charging */
 	struct parallel_params	pl;
@@ -468,6 +560,17 @@ struct smb_charger {
 	struct delayed_work	usbov_dbc_work;
 	struct delayed_work	pr_swap_detach_work;
 	struct delayed_work	pr_lock_clear_work;
+//bug536193 gudi.wt,MODIFIY,20200327,P85943 bringup,add period log
+	struct delayed_work	period_update_work;
+
+	//Bug 536193,wangjiayuan.wt,Modify,20200518,reduce the reproducibility rate of usbin-ov error.
+	struct delayed_work	usbov_delay_report_work;
+
+	/* +Bug 538062, zhangbin2.wt, 20200309, Add for AFC, Begin +++  */
+#if defined(CONFIG_AFC)
+	struct delayed_work	compliant_check_work;
+#endif
+	/* -Bug 538062, zhangbin2.wt, 20200309, Add for AFC, End --- */
 	struct delayed_work	role_reversal_check;
 
 	struct alarm		lpd_recheck_timer;
@@ -506,6 +609,26 @@ struct smb_charger {
 	int			*thermal_mitigation;
 	int			dcp_icl_ua;
 	int			fake_capacity;
+	//+ SS_charging, add battery_cycle node
+	int			batt_cycle;
+	int			battery_health;
+//bug536193 gudi.wt,MODIFIY,20200325,P85943 bringup,add SS-node store_mode node to control capacity
+	int			store_mode;
+//bug536193 gudi.wt,MODIFIY,20200325,P85943 bringup,add SS-node node for customer
+	int			slate_mode;
+	int			usb_suspend_mode;
+//bug536193 gudi.wt,MODIFIY,2020420,P85943 limit lcd on current
+	int			last_bat_current;
+//bug536193,P85973,gudi.wt,20200602,FC:[CW2017]use CW temp control fcc fv
+	int			last_bat_fv;
+//bug561005,gudi.wt,20200701,FC:modify when cw-capacity 100,when qg-capacity >=99 */
+	bool			cap_100_flag;
+#ifdef CONFIG_DISABLE_TEMP_PROTECT
+	/* bug536193,gudi.wt,20200708,let low power test captical descend soon */
+	int			low_temp_cap_flag;
+#endif /* CONFIG__DISABLE_TEMP_PROTECT */
+	/* bug568048,gudi.wt,20200714,reduce repeated chargingtemp, in temp 1-5 test */
+	bool			wt_chg_done;
 	int			fake_batt_status;
 	bool			step_chg_enabled;
 	bool			sw_jeita_enabled;
@@ -529,9 +652,13 @@ struct smb_charger {
 	bool			jeita_arb_flag;
 	bool			use_extcon;
 	bool			otg_present;
+#ifdef CONFIG_USB_NOTIFIER
+	bool			otg_block;		//bug545925, zhaobeilong@wt, 20200410, add usb control node
+#endif
 	bool			hvdcp_disable;
 	int			hw_max_icl_ua;
 	int			auto_recharge_soc;
+	int			auto_recharge_vbat_mv;
 	enum sink_src_mode	sink_src_mode;
 	enum power_supply_typec_power_role power_role;
 	enum jeita_cfg_stat	jeita_configured;
@@ -568,6 +695,9 @@ struct smb_charger {
 	bool			aicl_max_reached;
 	int			charge_full_cc;
 	int			cc_soc_ref;
+	//Bug 536193,wangjiayuan.wt,Modify,20200518,reduce the reproducibility rate of usbin-ov error.
+	int			old_batt_status;
+
 	int			last_cc_soc;
 	int			term_vbat_uv;
 	int			usbin_forced_max_uv;
@@ -581,6 +711,16 @@ struct smb_charger {
 	bool			dpdm_enabled;
 	bool			apsd_ext_timeout;
 	bool			qc3p5_detected;
+
+	/* +Bug 538062, zhangbin2.wt, 20200309, Add for AFC, Begin +++  */
+#if defined(CONFIG_AFC)
+	int			afc_sts;
+	bool			hv_disable;
+//bug536193 gudi.wt,MODIFIY,20200327,P85943 bringup,add afc_flag node
+	int			afc_flag;
+#endif
+
+	/* -Bug 538062, zhangbin2.wt, 20200309, Add for AFC, End --- */
 
 	/* workaround flag */
 	u32			wa_flags;
@@ -822,6 +962,8 @@ int smblib_read_iio_channel(struct smb_charger *chg, struct iio_channel *chan,
 							int div, int *data);
 int smblib_configure_hvdcp_apsd(struct smb_charger *chg, bool enable);
 int smblib_icl_override(struct smb_charger *chg, enum icl_override_mode mode);
+int smblib_set_prop_rechg_vbat_thresh(struct smb_charger *chg,
+				const union power_supply_propval *val);
 enum alarmtimer_restart smblib_lpd_recheck_timer(struct alarm *alarm,
 				ktime_t time);
 int smblib_toggle_smb_en(struct smb_charger *chg, int toggle);
@@ -833,6 +975,20 @@ int smblib_force_vbus_voltage(struct smb_charger *chg, u8 val);
 int smblib_get_irq_status(struct smb_charger *chg,
 				union power_supply_propval *val);
 int smblib_get_qc3_main_icl_offset(struct smb_charger *chg, int *offset_ua);
+
+//+bug536193 gudi.wt,MODIFIY,20200325,P85943 bringup,add SS-node store_mode node to control capacity
+int smblib_get_prop_store_mode(struct smb_charger *chg,
+				union power_supply_propval *val);
+int smblib_set_prop_store_mode(struct smb_charger *chg,
+				const union power_supply_propval *val);
+//-bug536193 gudi.wt,MODIFIY,20200325,P85943 bringup,add SS-node store_mode node to control capacity
+/* +Bug 538062, zhangbin2.wt, 20200309, Add for AFC, Begin +++  */
+#if defined(CONFIG_AFC)
+int is_afc_result(struct smb_charger *chg,int result);
+#endif
+/* -Bug 538062, zhangbin2.wt, 20200309, Add for AFC, End --- */
+
+void smblib_notify_usb_host(struct smb_charger *chg, bool enable);	//bug545925, zhaobeilong@wt, 20200410, add usb control node
 
 int smblib_init(struct smb_charger *chg);
 int smblib_deinit(struct smb_charger *chg);

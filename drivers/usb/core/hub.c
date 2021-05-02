@@ -35,6 +35,10 @@
 #include "hub.h"
 #include "otg_whitelist.h"
 
+#if defined(CONFIG_USB_NOTIFIER)
+#include <linux/usb_notify.h>
+#endif
+
 #define USB_VENDOR_GENESYS_LOGIC		0x05e3
 #define HUB_QUIRK_CHECK_PORT_AUTOSUSPEND	0x01
 
@@ -2376,6 +2380,18 @@ static int usb_enumerate_device(struct usb_device *udev)
 		return -ENOTSUPP;
 	}
 
+#if defined(CONFIG_USB_NOTIFIER)
+	if (!usb_check_whitelist_for_mdm(udev)) {
+		if (IS_ENABLED(CONFIG_USB_OTG) && (udev->bus->b_hnp_enable
+			|| udev->bus->is_b_host)) {
+			err = usb_port_suspend(udev, PMSG_AUTO_SUSPEND);
+			if (err < 0)
+				dev_dbg(&udev->dev, "HNP fail, %d\n", err);
+		}
+		return -ENOTSUPP;
+	}
+#endif
+
 	usb_detect_interface_quirks(udev);
 
 	return 0;
@@ -4443,6 +4459,8 @@ static int hub_set_address(struct usb_device *udev, int devnum)
  * device says it supports the new USB 2.0 Link PM errata by setting the BESL
  * support bit in the BOS descriptor.
  */
+/*bug542108, zhaobeilong.wt, 20200324, mod, disable usb lpm for lost package issue, start*/
+#if 0
 static void hub_set_initial_usb2_lpm_policy(struct usb_device *udev)
 {
 	struct usb_hub *hub = usb_hub_to_struct_hub(udev->parent);
@@ -4460,7 +4478,8 @@ static void hub_set_initial_usb2_lpm_policy(struct usb_device *udev)
 		usb_enable_usb2_hardware_lpm(udev);
 	}
 }
-
+#endif
+/*bug542108, zhaobeilong.wt, 20200324, mod, disable usb lpm for lost package issue, end*/
 static int hub_enable_device(struct usb_device *udev)
 {
 	struct usb_hcd *hcd = bus_to_hcd(udev->bus);
@@ -4823,7 +4842,7 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 	/* notify HCD that we have a device connected and addressed */
 	if (hcd->driver->update_device)
 		hcd->driver->update_device(hcd, udev);
-	hub_set_initial_usb2_lpm_policy(udev);
+	//hub_set_initial_usb2_lpm_policy(udev); //bug542108, zhaobeilong.wt, 20200324, mod, disable usb lpm for lost package issue
 fail:
 	if (retval) {
 		hub_port_disable(hub, port1, 0);

@@ -46,7 +46,12 @@ static const char * const power_supply_type_text[] = {
 	"USB_PD", "USB_PD_DRP", "BrickID",
 	"USB_HVDCP", "USB_HVDCP_3", "USB_HVDCP_3P5", "Wireless", "USB_FLOAT",
 	"BMS", "Parallel", "Main", "USB_C_UFP", "USB_C_DFP",
-	"Charge_Pump",
+	"Charge_Pump","OTG",//bug536193 gudi.wt,MODIFIY,20200325,P85943 bringup,add SS-node + "OTG"
+	/* +Bug 538062, zhangbin2.wt, 20200309, Add for AFC, Begin +++  */
+#if defined(CONFIG_AFC)
+	"AFC",
+#endif
+	/* -Bug 538062, zhangbin2.wt, 20200309, Add for AFC, End --- */
 };
 
 static const char * const power_supply_usb_type_text[] = {
@@ -59,7 +64,7 @@ static const char * const power_supply_status_text[] = {
 };
 
 static const char * const power_supply_charge_type_text[] = {
-	"Unknown", "N/A", "Trickle", "Fast", "Taper"
+	"Unknown", "N/A", "Trickle", "Fast", "Taper","Slow" //bug536193 gudi.wt,MODIFIY,20200325,P85943 bringup,add SS-node txt +"Slow"
 };
 
 static const char * const power_supply_health_text[] = {
@@ -233,6 +238,16 @@ static ssize_t power_supply_store_property(struct device *dev,
 	enum power_supply_property psp = attr - power_supply_attrs;
 	union power_supply_propval value;
 
+//+bug536193 gudi.wt,MODIFIY,20200325,P85943 bringup,add SS-node +"STORE_MODE" [196075]
+	int x;
+	if(psp == POWER_SUPPLY_PROP_STORE_MODE)
+	{
+		if(sscanf(buf,"%10d\n",&x)==1){
+			value.intval = x;
+			pr_err("WT buf %s, store_mode %d, \n",buf, x);
+		}
+	}
+//-bug536193 gudi.wt,MODIFIY,20200325,P85943 bringup,add SS-node +"STORE_MODE" [196075]
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
 		ret = sysfs_match_string(power_supply_status_text, buf);
@@ -437,6 +452,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(batt_profile_version),
 	POWER_SUPPLY_ATTR(batt_full_current),
 	POWER_SUPPLY_ATTR(recharge_soc),
+	POWER_SUPPLY_ATTR(recharge_vbat),
 	POWER_SUPPLY_ATTR(hvdcp_opti_allowed),
 	POWER_SUPPLY_ATTR(smb_en_mode),
 	POWER_SUPPLY_ATTR(smb_en_reason),
@@ -466,6 +482,26 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(skin_health),
 	POWER_SUPPLY_ATTR(aicl_done),
 	POWER_SUPPLY_ATTR(voltage_step),
+	/* Bug 538582, zhangbin2.wt, 20200311, Add for Charger FTM test */
+	POWER_SUPPLY_ATTR(StopCharging_Test),
+	POWER_SUPPLY_ATTR(StartCharging_Test),
+	/* +Bug 538062, zhangbin2.wt, 20200309, Add for AFC, Begin +++  */
+//+bug536193 gudi.wt,MODIFIY,20200325,P85943 bringup,add SS-node
+	POWER_SUPPLY_ATTR(store_mode),
+	POWER_SUPPLY_ATTR(hv_charger_status),
+	POWER_SUPPLY_ATTR(batt_current_event),
+	POWER_SUPPLY_ATTR(batt_slate_mode),
+	POWER_SUPPLY_ATTR(batt_misc_event),
+	POWER_SUPPLY_ATTR(new_charge_type),
+	POWER_SUPPLY_ATTR(batt_current_ua_now),
+//-bug536193 gudi.wt,MODIFIY,20200325,P85943 bringup,add SS-node
+	POWER_SUPPLY_ATTR(battery_cycle),
+#if defined(CONFIG_AFC)
+	POWER_SUPPLY_ATTR(afc_result),
+	POWER_SUPPLY_ATTR(hv_disable),
+	POWER_SUPPLY_ATTR(afc_flag),
+#endif
+	/* -Bug 538062, zhangbin2.wt, 20200309, Add for AFC, End --- */
 	POWER_SUPPLY_ATTR(apsd_rerun),
 	POWER_SUPPLY_ATTR(apsd_timeout),
 	/* Charge pump properties */
@@ -582,6 +618,11 @@ int power_supply_uevent(struct device *dev, struct kobj_uevent_env *env)
 	for (j = 0; j < psy->desc->num_properties; j++) {
 		struct device_attribute *attr;
 		char *line;
+
+		/* Bug 538582, zhangbin2.wt, 20200311, Add for Charger FTM test */
+		if ((psy->desc->properties[j] == POWER_SUPPLY_PROP_STOPCHARGING_TEST)
+			|| (psy->desc->properties[j] == POWER_SUPPLY_PROP_STARTCHARGING_TEST))
+			continue;
 
 		attr = &power_supply_attrs[psy->desc->properties[j]];
 

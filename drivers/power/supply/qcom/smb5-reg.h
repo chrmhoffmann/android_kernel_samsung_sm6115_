@@ -105,6 +105,10 @@ enum {
 #define JEITA_EN_COLD_SL_FCV_BIT		BIT(2)
 #define JEITA_EN_HOT_SL_CCC_BIT			BIT(1)
 #define JEITA_EN_COLD_SL_CCC_BIT		BIT(0)
+/* +Bug536193,P85943,gudi.wt,20200512,mofify jieta AFP */
+#define JEITA_EN_AFP_HOT			BIT(7)
+#define JEITA_EN_AFP_COLF			BIT(6)
+/* -Bug536193,P85943,gudi.wt,20200512,mofify jieta AFP */
 
 #define JEITA_CCCOMP_CFG_HOT_REG		(CHGR_BASE + 0x92)
 #define JEITA_CCCOMP_CFG_COLD_REG		(CHGR_BASE + 0x93)
@@ -130,6 +134,12 @@ enum {
 
 #define AICL_STATUS_REG				(DCDC_BASE + 0x0A)
 #define SOFT_ILIMIT_BIT				BIT(6)
+/* +Bug 538062, zhangbin2.wt, 20200309, Add for AFC, Begin +++  */
+#if defined(CONFIG_AFC)
+#define USBIN_CH_COLLAPSE			BIT(4)
+#define ICL_IMIN					BIT(2)
+#endif
+/* -Bug 538062, zhangbin2.wt, 20200309, Add for AFC, End --- */
 #define AICL_DONE_BIT				BIT(0)
 
 #define POWER_PATH_STATUS_REG			(DCDC_BASE + 0x0B)
@@ -524,6 +534,9 @@ enum {
 
 #define AICL_RERUN_TIME_CFG_REG			(MISC_BASE + 0x61)
 #define AICL_RERUN_TIME_12S_VAL			0x01
+//Bug536193 gudi.wt,MODIFIY,20200409,poweroff charger current drop.
+#define MISC_AICL_TIME_MASK                      GENMASK(1, 0)
+
 
 #define MISC_THERMREG_SRC_CFG_REG		(MISC_BASE + 0x70)
 #define THERMREG_SW_ICL_ADJUST_BIT		BIT(7)

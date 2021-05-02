@@ -47,6 +47,8 @@ enum {
 	POWER_SUPPLY_CHARGE_TYPE_TRICKLE,
 	POWER_SUPPLY_CHARGE_TYPE_FAST,
 	POWER_SUPPLY_CHARGE_TYPE_TAPER,
+//bug536193 gudi.wt,MODIFIY,20200325,P85943 bringup,add SS-node new_charge_type node
+	POWER_SUPPLY_CHARGE_TYPE_SLOW,
 };
 
 enum {
@@ -317,6 +319,7 @@ enum power_supply_property {
 	POWER_SUPPLY_PROP_BATT_PROFILE_VERSION,
 	POWER_SUPPLY_PROP_BATT_FULL_CURRENT,
 	POWER_SUPPLY_PROP_RECHARGE_SOC,
+	POWER_SUPPLY_PROP_RECHARGE_VBAT,
 	POWER_SUPPLY_PROP_HVDCP_OPTI_ALLOWED,
 	POWER_SUPPLY_PROP_SMB_EN_MODE,
 	POWER_SUPPLY_PROP_SMB_EN_REASON,
@@ -346,6 +349,26 @@ enum power_supply_property {
 	POWER_SUPPLY_PROP_SKIN_HEALTH,
 	POWER_SUPPLY_PROP_AICL_DONE,
 	POWER_SUPPLY_PROP_VOLTAGE_STEP,
+	/* Bug 538582, zhangbin2.wt, 20200311, Add for Charger FTM test */
+	POWER_SUPPLY_PROP_STOPCHARGING_TEST,
+	POWER_SUPPLY_PROP_STARTCHARGING_TEST,
+//+bug536193 gudi.wt,MODIFIY,20200325,P85943 bringup,add SS-node
+	POWER_SUPPLY_PROP_STORE_MODE,//store_mode node to control capacity
+	POWER_SUPPLY_PROP_HV_CHARGER_STATUS,//battery node for customer
+	POWER_SUPPLY_PROP_BATT_CURRENT_EVENT,
+	POWER_SUPPLY_PROP_BATT_SLATE_MODE,
+	POWER_SUPPLY_PROP_BATT_MISC_EVENT,
+	POWER_SUPPLY_PROP_NEW_CHARGE_TYPE,
+	POWER_SUPPLY_PROP_BATT_CURRENT_UA_NOW,
+//-bug536193 gudi.wt,MODIFIY,20200325,P85943 bringup,add SS-node
+	/* +Bug 538062, zhangbin2.wt, 20200309, Add for AFC, Begin +++  */
+	POWER_SUPPLY_PROP_BATTERY_CYCLE,
+#if defined(CONFIG_AFC)
+	POWER_SUPPLY_PROP_AFC_RESULT,
+	POWER_SUPPLY_PROP_HV_DISABLE,
+	POWER_SUPPLY_PROP_AFC_FLAG,
+#endif
+	/* -Bug 538062, zhangbin2.wt, 20200309, Add for AFC, End --- */
 	POWER_SUPPLY_PROP_APSD_RERUN,
 	POWER_SUPPLY_PROP_APSD_TIMEOUT,
 	/* Charge pump properties */
@@ -400,6 +423,13 @@ enum power_supply_type {
 	POWER_SUPPLY_TYPE_UFP,			/* Type-C UFP */
 	POWER_SUPPLY_TYPE_DFP,			/* Type-C DFP */
 	POWER_SUPPLY_TYPE_CHARGE_PUMP,		/* Charge Pump */
+//bug536193 gudi.wt,MODIFIY,20200325,P85943 bringup,add SS-node add otg node
+	POWER_SUPPLY_TYPE_USB_OTG,	/* USB OTG */
+	/* +Bug 538062, zhangbin2.wt, 20200309, Add for AFC, Begin +++  */
+#if defined(CONFIG_AFC)
+	POWER_SUPPLY_TYPE_AFC,
+#endif
+	/* -Bug 538062, zhangbin2.wt, 20200309, Add for AFC, End --- */
 };
 
 enum power_supply_usb_type {
@@ -514,6 +544,10 @@ struct power_supply_desc {
 
 struct power_supply {
 	const struct power_supply_desc *desc;
+
+#ifdef CONFIG_USB_NOTIFIER
+	int usb_host_flag; 		//bug545925, zhaobeilong@wt, 20200410, add usb control node
+#endif
 
 	char **supplied_to;
 	size_t num_supplicants;

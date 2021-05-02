@@ -110,6 +110,10 @@
 /* response mode error mask */
 #define CQHCI_RMEM			0x50
 
+/* write protection violation */
+#define WP_ERASE_SKIP (1 << 15)
+#define WP_VIOLATION (1 << 26)
+
 /* task error info */
 #define CQHCI_TERRI			0x54
 

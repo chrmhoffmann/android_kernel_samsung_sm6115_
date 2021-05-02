@@ -13,7 +13,8 @@
 #define IPA_PM_MAX_EX_CL 64
 #define IPA_PM_THRESHOLD_MAX 5
 #define IPA_PM_EXCEPTION_MAX 5
-#define IPA_PM_DEFERRED_TIMEOUT 10
+//extb P200618-06446, wuwenting.wt, modify, 20200717, qualcomm case04704672 change from 10 to 100, make ping faster
+#define IPA_PM_DEFERRED_TIMEOUT 100 //10
 
 /*
  * ipa_pm group names

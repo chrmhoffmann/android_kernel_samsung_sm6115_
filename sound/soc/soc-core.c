@@ -51,6 +51,14 @@ EXPORT_SYMBOL_GPL(snd_soc_debugfs_root);
 #endif
 
 static DEFINE_MUTEX(client_mutex);
+//Bug 515704 baoshulin.wt 20191125 modify for compatiable smartpa
+static DEFINE_MUTEX(smartpa_mutex);
+int smartpa_type=INVALD;
+EXPORT_SYMBOL(smartpa_type);
+module_param(smartpa_type, int, 0664);
+MODULE_PARM_DESC(smartpa_type, "show smartpa type");
+//-Bug 515704 baoshulin.wt 20191125 modify for compatiable smartpa
+
 static LIST_HEAD(component_list);
 
 /*
@@ -3091,6 +3099,36 @@ static void snd_soc_component_setup_regmap(struct snd_soc_component *component)
 }
 
 #ifdef CONFIG_REGMAP
+
+//+Bug 515704 baoshulin.wt 20191125 modify for compatiable smartpa
+struct device *audio_device = NULL;
+int snd_soc_set_smartpa_type(const char * name, int pa_type)
+{
+	pr_info("%s driver set smartpa type is : %d",name,pa_type);
+	mutex_lock(&smartpa_mutex);
+	switch(pa_type)
+	{
+	case FS16XX:
+			smartpa_type=FS16XX;
+		break;
+	case FS18XX:
+			smartpa_type=FS18XX;
+		break;
+	case AW8825:
+			smartpa_type=AW8825;
+	    break;
+    case TAS2558:
+			smartpa_type=TAS2558;
+	    break;
+	default:
+			pr_info("this PA does not support\n\r");
+		break;
+	}
+	mutex_unlock(&smartpa_mutex);
+	return smartpa_type;
+}
+EXPORT_SYMBOL_GPL(snd_soc_set_smartpa_type);
+//-Bug 515704 baoshulin.wt 20191125 modify for compatiable smartpa
 
 /**
  * snd_soc_component_init_regmap() - Initialize regmap instance for the component

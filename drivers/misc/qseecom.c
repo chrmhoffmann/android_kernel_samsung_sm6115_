@@ -3695,7 +3695,6 @@ static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
 
 	if (qseecom.qsee_version < QSEE_VERSION_40) {
 		send_data_req.app_id = data->client.app_id;
-
 		send_data_req.req_ptr = (uint32_t)(__qseecom_uvirt_to_kphys(
 					data, (uintptr_t)req->cmd_req_buf));
 		send_data_req.req_len = req->cmd_req_len;
@@ -3711,7 +3710,6 @@ static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
 		cmd_len = sizeof(struct qseecom_client_send_data_ireq);
 	} else {
 		send_data_req_64bit.app_id = data->client.app_id;
-
 		send_data_req_64bit.req_ptr = __qseecom_uvirt_to_kphys(data,
 					(uintptr_t)req->cmd_req_buf);
 		send_data_req_64bit.req_len = req->cmd_req_len;
@@ -4356,7 +4354,6 @@ static int __qseecom_send_modfd_cmd(struct qseecom_dev_handle *data,
 			return -EINVAL;
 		}
 	}
-
 	req.cmd_req_buf = (void *)__qseecom_uvirt_to_kvirt(data,
 						(uintptr_t)req.cmd_req_buf);
 	req.resp_buf = (void *)__qseecom_uvirt_to_kvirt(data,

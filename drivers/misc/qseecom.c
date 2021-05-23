@@ -458,7 +458,6 @@ static int get_qseecom_keymaster_status(char *str)
 }
 __setup("androidboot.keymaster=", get_qseecom_keymaster_status);
 
-
 #define QSEECOM_SCM_EBUSY_WAIT_MS 30
 #define QSEECOM_SCM_EBUSY_MAX_RETRY 67
 
@@ -3083,6 +3082,11 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 		goto unload_exit;
 	}
 
+	if (!memcmp(data->client.app_name, "icccgrd", strlen("icccgrd"))) {
+		pr_debug("Do not unload icccgrd app from tz\n");
+		goto unload_exit;
+	}
+
 	__qseecom_cleanup_app(data);
 	__qseecom_reentrancy_check_if_no_app_blocked(TZ_OS_APP_SHUTDOWN_ID);
 
@@ -3649,7 +3653,7 @@ int __qseecom_process_reentrancy(struct qseecom_command_scm_resp *resp,
 }
 
 static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
-				struct qseecom_send_cmd_req *req)
+			struct qseecom_send_cmd_req *req)
 {
 	int ret = 0;
 	u32 reqd_len_sb_in = 0;
@@ -3691,6 +3695,7 @@ static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
 
 	if (qseecom.qsee_version < QSEE_VERSION_40) {
 		send_data_req.app_id = data->client.app_id;
+
 		send_data_req.req_ptr = (uint32_t)(__qseecom_uvirt_to_kphys(
 					data, (uintptr_t)req->cmd_req_buf));
 		send_data_req.req_len = req->cmd_req_len;
@@ -3706,6 +3711,7 @@ static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
 		cmd_len = sizeof(struct qseecom_client_send_data_ireq);
 	} else {
 		send_data_req_64bit.app_id = data->client.app_id;
+
 		send_data_req_64bit.req_ptr = __qseecom_uvirt_to_kphys(data,
 					(uintptr_t)req->cmd_req_buf);
 		send_data_req_64bit.req_len = req->cmd_req_len;
@@ -4350,6 +4356,7 @@ static int __qseecom_send_modfd_cmd(struct qseecom_dev_handle *data,
 			return -EINVAL;
 		}
 	}
+
 	req.cmd_req_buf = (void *)__qseecom_uvirt_to_kvirt(data,
 						(uintptr_t)req.cmd_req_buf);
 	req.resp_buf = (void *)__qseecom_uvirt_to_kvirt(data,

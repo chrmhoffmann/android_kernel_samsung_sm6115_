@@ -11,6 +11,7 @@
 
 #include "kgsl_device.h"
 #include "kgsl_sharedmem.h"
+#include <linux/bitfield.h>
 
 /*
  * The user can set this from debugfs to force failed memory allocations to
@@ -469,6 +470,8 @@ static int kgsl_page_alloc_vmfault(struct kgsl_memdesc *memdesc,
 		get_page(page);
 		vmf->page = page;
 
+		atomic_long_add(PAGE_SIZE, &memdesc->mapsize);
+
 		return 0;
 	}
 
@@ -886,7 +889,6 @@ void kgsl_memdesc_init(struct kgsl_device *device,
 		(memdesc->flags & KGSL_MEMALIGN_MASK) >> KGSL_MEMALIGN_SHIFT,
 		ilog2(PAGE_SIZE));
 	kgsl_memdesc_set_align(memdesc, align);
-	spin_lock_init(&memdesc->gpuaddr_lock);
 }
 
 int

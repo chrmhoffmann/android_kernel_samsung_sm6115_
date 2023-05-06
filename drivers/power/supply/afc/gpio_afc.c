@@ -488,14 +488,16 @@ static const struct attribute_group afc_group = {
 
 static int afc_sysfs_init(void)
 {
-	static struct device *afc;
+	static struct device *afc, *afc_lineage;
 	int ret = 0;
 
 	pr_info("%s\n", __func__);
 
 	/* sysfs */
 	afc = sec_device_create(NULL, "afc");
-	if (IS_ERR(afc)) {
+	afc_lineage = sec_device_create(NULL, "switch");
+
+	if (IS_ERR(afc) || IS_ERR(afc_lineage)) {
 		pr_err("%s Failed to create device(afc)!\n", __func__);
 		ret = -ENODEV;
 	}
@@ -505,6 +507,10 @@ static int afc_sysfs_init(void)
 		pr_err("%s: afc sysfs fail, ret %d", __func__, ret);
 	}
 
+	ret = sysfs_create_group(&afc_lineage->kobj, &afc_group);
+	if (ret) {
+		pr_err("%s: afc sysfs for lineage compat fail, ret %d", __func__, ret);
+	}
 	return 0;
 }
 
